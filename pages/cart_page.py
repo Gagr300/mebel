@@ -6,7 +6,7 @@ from config.config import Config
 
 
 class CartPage(BasePage):
-    # Локаторы для корзины на основе предоставленного HTML
+    # Локаторы для корзины
     CART_CONTAINER = "#cartWidget"
     CART_ITEM = ".list-group-item"
     CART_ITEM_NAME = f"{CART_ITEM} a.font-weight-bold"
@@ -45,7 +45,6 @@ class CartPage(BasePage):
                 first_item = self.page.locator(self.CART_ITEM).first
 
                 # Ищем все элементы с ценой внутри первого товара
-                # Из HTML: <div class="col-md-2 py-2">12&nbsp;405 ₽</div>
                 price_elements = first_item.locator(".col-md-2.py-2").all()
 
                 # Логируем найденные элементы для отладки
@@ -56,7 +55,7 @@ class CartPage(BasePage):
                         text = elem.text_content() or ""
                         allure.attach(f"Элемент {i}: '{text}'", name="Отладка")
 
-                        # Проверяем, содержит ли элемент символ ₽ (это цена)
+                        # Проверяем, содержит ли элемент символ ₽
                         if '₽' in text:
                             # Очищаем цену от символов валюты и пробелов
                             price_clean = re.sub(r'[^\d]', '', text)
