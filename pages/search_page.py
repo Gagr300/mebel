@@ -1,86 +1,58 @@
-# pages/cart_page.py
 import allure
-import re
 from pages.base_page import BasePage
 from config.config import Config
 
 
-class CartPage(BasePage):
-    # Локаторы для корзины
-    CART_CONTAINER = "#cartWidget"
-    CART_ITEM = ".list-group-item"
-    CART_ITEM_NAME = f"{CART_ITEM} a.font-weight-bold"
-    CART_ITEM_PRICE = f"{CART_ITEM} .col-md-2.py-2"  # Цена товара
-    EMPTY_CART_MESSAGE = ".lead:has-text('Корзина пуста')"
-    TOTAL_PRICE = "h2:has-text('Итого:')"
+class SearchPage(BasePage):
+    SEARCH_RESULTS_GRID = ".product-card"
+    FIRST_SEARCH_RESULT_TITLE = f"{SEARCH_RESULTS_GRID}:first-child .product-card__name a"
+    SEARCH_RESULTS_COUNT = ".w-100.pl-3.pr-3"
 
-    def open_cart(self):
-        with allure.step("Открыть корзину"):
-            self.open(Config.CART_URL)
-            self.page.wait_for_load_state("networkidle")
+    def open_search_page(self):
+        with allure.step("Открыть главную страницу"):
+            self.open(Config.BASE_URL)
+            self.page.wait_for_load_state("domcontentloaded")
 
-    def is_cart_not_empty(self) -> bool:
-        """Проверить, не пуста ли корзина"""
-        try:
-            self.page.wait_for_selector(self.CART_ITEM, timeout=5000)
-            return True
-        except:
-            return False
+    def search(self, query: str):
+        with allure.step(f"Выполнить поиск по запросу: '{query}'"):
+            # Прямой переход на страницу поиска
+            search_url = f"{Config.BASE_URL}/search/{query}"
+            allure.attach(f"Переход по URL: {search_url}", name="Информация")
 
-    def get_first_item_name(self) -> str:
-        """Получить название первого товара в корзине"""
-        if self.is_cart_not_empty():
-            name_element = self.page.locator(self.CART_ITEM_NAME).first
-            if name_element.is_visible():
-                name = name_element.text_content()
-                allure.attach(f"Первый товар в корзине: {name}", name="Информация")
-                return name or ""
-        return ""
+            # Переходим на страницу поиска
+            self.page.goto(search_url, wait_until="domcontentloaded")
+            self.page.wait_for_timeout(2000)
 
-    def get_first_item_price(self) -> str:
-        """
-        Получить цену первого товара в корзине
+            # Проверяем результаты
+            try:
+                self.wait_for_selector(self.SEARCH_RESULTS_GRID)
+                results_count = self.page.locator(self.SEARCH_RESULTS_GRID).count()
+                allure.attach(f"Найдено результатов: {results_count}", name="Информация")
 
-        Из структуры HTML:
-        <div class="col-md-2 py-2">12,405 ₽</div>
+                # Выводим заголовки всех найденных товаров
+                titles = []
+                for card in self.page.locator(self.SEARCH_RESULTS_GRID).all()[:5]:  # Первые 5
+                    title_elem = card.locator(".product-card__name a").first
+                    if title_elem.is_visible():
+                        titles.append(title_elem.text_content())
 
-        Returns:
-            str: Цена товара в виде числа (12405)
-        """
-        if not self.is_cart_not_empty():
-            return "0"
+                if titles:
+                    allure.attach("Первые результаты:\n" + "\n".join(titles), name="Результаты поиска")
 
-        with allure.step("Получить цену первого товара в корзине"):
-            # Находим первый товар в корзине
-            first_item = self.page.locator(self.CART_ITEM).first
+            except Exception as e:
+                allure.attach(f"Результаты поиска не найдены: {str(e)}", name="Предупреждение")
 
-            # Ищем элемент с ценой внутри первого товара
-            price_element = first_item.locator(self.CART_ITEM_PRICE).first
+    def get_first_result_title(self) -> str:
+        with allure.step("Получить название первого результата поиска"):
+            try:
+                self.page.wait_for_selector(self.SEARCH_RESULTS_GRID, timeout=5000)
+                first_result = self.page.locator(self.FIRST_SEARCH_RESULT_TITLE).first
 
-            if price_element.is_visible():
-                price_text = price_element.text_content() or ""
-                allure.attach(f"Текст цены: '{price_text}'", name="Информация")
+                if first_result.is_visible():
+                    title = first_result.text_content()
+                    allure.attach(f"Первый результат: {title}", name="Информация")
+                    return title.strip() if title else ""
+            except Exception as e:
+                allure.attach(f"Ошибка: {str(e)}", name="Ошибка")
 
-                # Очищаем цену от символов (оставляем только цифры)
-                # Убираем пробелы, запятые, символ валюты
-                price_clean = re.sub(r'[^\d]', '', price_text)
-
-                allure.attach(f"Очищенная цена: {price_clean}", name="Результат")
-                return price_clean
-
-            allure.attach("Элемент с ценой не найден", name="Ошибка")
-            return "0"
-
-    def get_total_price(self) -> str:
-        """Получить общую стоимость корзины"""
-        with allure.step("Получить общую стоимость корзины"):
-            total_element = self.page.locator(self.TOTAL_PRICE).first
-            if total_element.is_visible():
-                total_text = total_element.text_content() or ""
-                # Извлекаем число из текста "Итого: 12 015 ₽"
-                match = re.search(r'([\d\s,]+)₽', total_text)
-                if match:
-                    total_clean = re.sub(r'[^\d]', '', match.group(1))
-                    allure.attach(f"Общая стоимость: {total_clean}", name="Информация")
-                    return total_clean
-            return "0"
+            return ""
