@@ -231,6 +231,35 @@ class CatalogPage(BasePage):
         # Если не нашли счетчик, считаем товары на странице
         return len(self.page.locator(self.PRODUCT_CARD).all())
 
+    def get_first_favorite_icon_state(self) -> str:
+        """Получить состояние иконки избранного первого товара (возвращает классы)"""
+        with allure.step("Получить состояние иконки избранного"):
+            self.page.wait_for_selector(self.PRODUCT_CARD, state="visible")
+            first_card = self.page.locator(self.PRODUCT_CARD).first
+            favorite_icon = first_card.locator(".product-card__favorites .favorite-icon").first
+
+            if favorite_icon.is_visible():
+                classes = favorite_icon.get_attribute('class') or ""
+                is_active = 'active' in classes
+                allure.attach(
+                    f"Иконка видима: {favorite_icon.is_visible()}\n"
+                    f"Классы: {classes}\n"
+                    f"Активна (есть класс 'active'): {is_active}",
+                    name="Состояние иконки"
+                )
+                return classes
+            else:
+                # Попробуем найти альтернативный элемент
+                alt_icon = first_card.locator("a.favorite-icon").first
+                if alt_icon.is_visible():
+                    classes = alt_icon.get_attribute('class') or ""
+                    allure.attach(f"Иконка найдена по альтернативному пути. Классы: {classes}",
+                                  name="Информация")
+                    return classes
+
+                allure.attach("Иконка избранного не найдена в первой карточке", name="Ошибка")
+                return ""
+
     def verify_prices_in_range(self, price_from: int, price_to: int) -> Tuple[List[int], List[Tuple[str, int]]]:
         """Проверить, что все цены на странице в заданном диапазоне"""
         prices_in_range = []
@@ -276,24 +305,87 @@ class CatalogPage(BasePage):
                 allure.attach("Не удалось найти цену первого товара", name="Ошибка")
                 return "0"
 
-    def click_first_product_favorite(self):
-        """Нажать на иконку избранного у первого товара"""
-        with allure.step("Добавить первый товар в избранное"):
+    def get_first_product_href(self) -> str:
+        """Получить href (ссылку) первого товара в каталоге"""
+        with allure.step("Получить href первого товара в каталоге"):
             self.wait_for_selector(self.PRODUCT_CARD)
-            first_card = self.page.locator(self.PRODUCT_CARD).first
-            favorite_icon = first_card.locator(self.PRODUCT_FAVORITE_ICON).first
 
+            # Пробуем найти ссылку в названии товара
+            product_link = self.page.locator(self.PRODUCT_LINK).first
+
+            if product_link.is_visible():
+                href = product_link.get_attribute('href')
+                allure.attach(f"href первого товара: {href}", name="Информация")
+                return href or ""
+
+            # Если не нашли через PRODUCT_LINK, ищем любую ссылку внутри карточки
+            first_card = self.page.locator(self.PRODUCT_CARD).first
+            any_link = first_card.locator("a").first
+
+            if any_link.is_visible():
+                href = any_link.get_attribute('href')
+                allure.attach(f"href первого товара (альтернативный): {href}", name="Информация")
+                return href or ""
+
+            allure.attach("Не удалось найти href первого товара", name="Ошибка")
+            return ""
+
+    def click_first_product_favorite(self):
+        """Нажать на иконку избранного у первого товара (более надежный способ)"""
+        with allure.step("Добавить первый товар в избранное"):
+            # Ждем появления хотя бы одной карточки товара
+            self.page.wait_for_selector(self.PRODUCT_CARD, state="visible", timeout=10000)
+
+            # Берем первую карточку
+            first_card = self.page.locator(self.PRODUCT_CARD).first
+
+            # Прокручиваем к карточке, чтобы она была в зоне видимости
+            first_card.scroll_into_view_if_needed()
+            self.page.wait_for_timeout(500)
+
+            # Ищем иконку избранного внутри первой карточки
+            # Используем более конкретный локатор
+            favorite_icon = first_card.locator(".product-card__favorites .favorite-icon").first
+
+            # Проверяем видимость и кликаем
             if favorite_icon.is_visible():
-                favorite_icon.scroll_into_view_if_needed()
-                self.page.wait_for_timeout(500)
-                favorite_icon.click()
-                allure.attach("Иконка избранного нажата", name="Успешно")
-                self.page.wait_for_timeout(1000)
+                # Дополнительно логируем состояние до клика
+                class_before = favorite_icon.get_attribute("class")
+                allure.attach(f"Классы иконки ДО клика: {class_before}", name="Отладка")
+
+                # Пробуем кликнуть через JavaScript на случай, если элемент перекрыт
+                try:
+                    favorite_icon.click(timeout=5000)
+                except:
+                    # Если обычный клик не сработал, пробуем JS
+                    self.page.evaluate("(element) => element.click()", favorite_icon)
+
+                self.page.wait_for_timeout(1000)  # Ждем обновления состояния
+
+                # Проверяем состояние после клика
+                class_after = favorite_icon.get_attribute("class")
+                allure.attach(f"Классы иконки ПОСЛЕ клика: {class_after}", name="Отладка")
+
+                # Проверяем, добавился ли класс 'active' (признак успешного добавления)
+                if 'active' in class_after:
+                    allure.attach("Товар успешно добавлен в избранное (появился класс 'active')", name="Успешно")
+                else:
+                    # Если класс не появился, но ошибки не было, возможно, сайт работает иначе
+                    allure.attach("Класс 'active' не обнаружен после клика, но клик прошел. Проверяем счетчик...",
+                                  name="Предупреждение")
             else:
+                # Если иконка не видна, сохраняем HTML для отладки
                 card_html = first_card.inner_html()
                 allure.attach(card_html, name="HTML первой карточки",
                               attachment_type=allure.attachment_type.HTML)
-                raise AssertionError("Иконка избранного не найдена у первого товара")
+
+                # Попробуем найти иконку по другому пути (на случай изменения верстки)
+                alt_icon = first_card.locator("a.favorite-icon").first
+                if alt_icon.is_visible():
+                    alt_icon.click()
+                    allure.attach("Иконка найдена по альтернативному пути и кликнута", name="Успешно")
+                else:
+                    raise AssertionError("Иконка избранного не найдена у первого товара")
 
     def click_first_product_add_to_cart(self):
         """Нажать кнопку 'Купить' у первого товара"""

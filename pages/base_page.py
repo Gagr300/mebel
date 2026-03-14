@@ -89,3 +89,19 @@ class BasePage:
                 allure.attach(f"Ошибка клика: {str(e)}\nURL: {self.page.url}",
                               name="Ошибка клика")
                 raise
+
+    def safe_goto(self, url: str, wait_until: str = "domcontentloaded", timeout: int = 30000):
+        """
+        Безопасный переход по URL с возможностью выбора состояния загрузки.
+        По умолчанию ждет только загрузки DOM, не networkidle.
+        """
+        with allure.step(f"Перейти на страницу {url}"):
+            try:
+                self.page.goto(url, wait_until=wait_until, timeout=timeout)
+                # Небольшая пауза для стабилизации
+                self.page.wait_for_timeout(1000)
+            except Exception as e:
+                allure.attach(f"Ошибка при переходе на {url}: {str(e)}", name="Ошибка навигации")
+                # Пробуем еще раз с меньшими требованиями
+                self.page.goto(url, wait_until="commit", timeout=timeout)
+                self.page.wait_for_timeout(2000)

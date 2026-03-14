@@ -1,3 +1,4 @@
+# pages/header_component.py
 import allure
 from pages.base_page import BasePage
 from config.config import Config
@@ -19,43 +20,80 @@ class HeaderComponent(BasePage):
                 self.click(self.CART_LINK_MOBILE, "Иконка корзины (моб.)")
             else:
                 self.page.goto(Config.CART_URL)
-            self.page.wait_for_load_state("networkidle")
+
+            # Ждем только загрузки DOM, а не полной остановки сети
+            self.page.wait_for_load_state("domcontentloaded")
+            # Даем небольшую паузу для рендеринга
+            self.page.wait_for_timeout(1000)
 
     def go_to_favorite(self):
         with allure.step("Перейти в избранное через шапку сайта"):
-            if self.is_visible(self.FAVORITE_LINK):
-                self.click(self.FAVORITE_LINK, "Иконка избранного")
-            elif self.is_visible(self.FAVORITE_LINK_MOBILE):
-                self.click(self.FAVORITE_LINK_MOBILE, "Иконка избранного (моб.)")
-            else:
+            # Пробуем найти ссылку на избранное в разных местах
+            favorite_found = False
+
+            # Для десктопной версии
+            desktop_link = self.page.locator(self.FAVORITE_LINK).first
+            if desktop_link.is_visible():
+                desktop_link.click()
+                favorite_found = True
+                allure.attach("Клик по ссылке избранного (десктоп)", name="Успешно")
+
+            # Для мобильной версии
+            if not favorite_found:
+                mobile_link = self.page.locator(self.FAVORITE_LINK_MOBILE).first
+                if mobile_link.is_visible():
+                    mobile_link.click()
+                    favorite_found = True
+                    allure.attach("Клик по ссылке избранного (мобильная)", name="Успешно")
+
+            # Если не нашли через клик, переходим напрямую по URL
+            if not favorite_found:
                 self.page.goto(Config.FAVORITE_URL)
-            self.page.wait_for_load_state("networkidle")
+                allure.attach("Переход по прямому URL избранного", name="Информация")
+
+            # Ждем только загрузки DOM, не networkidle
+            self.page.wait_for_load_state("domcontentloaded")
+            self.page.wait_for_timeout(2000)  # Даем время на рендеринг JS
+
+            # Проверяем, что мы действительно на странице избранного
+            current_url = self.page.url
+            assert "favorite" in current_url, f"Не удалось перейти в избранное. Текущий URL: {current_url}"
+
+            # Делаем скриншот для отчета
+            from utils.allure_attach import attach_screenshot
+            attach_screenshot(self.page, "Страница избранного после перехода")
 
     def get_favorite_count(self) -> int:
         """Получить количество товаров в избранном из счетчика в шапке"""
         with allure.step("Получить счетчик избранного"):
             # Пробуем найти счетчик в разных местах
-            favorite_counter = None
+            selectors = [
+                ".header-laptop__favorite .favorite-informer b small",  # Десктоп
+                ".mobile-header__favorite .favorite-informer b small",  # Мобильный
+                ".favorite-informer b small",  # Общий
+                ".header-laptop__favorite b small",  # Альтернативный
+                ".mobile-header__favorite b small",  # Альтернативный
+                ".header-laptop__favorite .favorite-informer b",  # Без small
+                ".mobile-header__favorite .favorite-informer b"  # Без small
+            ]
 
-            # Для десктопной версии
-            desktop_counter = self.page.locator(".header-laptop__favorite .favorite-informer b small").first
-            if desktop_counter.is_visible():
-                favorite_counter = desktop_counter
+            for selector in selectors:
+                counter_element = self.page.locator(selector).first
+                if counter_element.is_visible():
+                    count_text = counter_element.text_content()
+                    try:
+                        # Очищаем текст от возможных HTML-тегов и пробелов
+                        if count_text:
+                            # Убираем все, кроме цифр
+                            import re
+                            digits = re.sub(r'[^\d]', '', count_text)
+                            if digits:
+                                count = int(digits)
+                                allure.attach(f"Счетчик избранного ({selector}): {count}", name="Информация")
+                                return count
+                    except (ValueError, AttributeError):
+                        continue
 
-            # Для мобильной версии
-            if not favorite_counter:
-                mobile_counter = self.page.locator(".mobile-header__favorite .favorite-informer b small").first
-                if mobile_counter.is_visible():
-                    favorite_counter = mobile_counter
-
-            if favorite_counter and favorite_counter.is_visible():
-                count_text = favorite_counter.text_content()
-                try:
-                    count = int(count_text.strip()) if count_text else 0
-                    allure.attach(f"Товаров в избранном: {count}", name="Информация")
-                    return count
-                except ValueError:
-                    pass
-
-            allure.attach("Счетчик избранного не найден или пуст", name="Информация")
+            # Если не нашли счетчик, возможно, он пустой (скрыт)
+            allure.attach("Счетчик избранного не найден или пуст (возвращаем 0)", name="Информация")
             return 0
