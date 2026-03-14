@@ -3,13 +3,30 @@ import allure
 from playwright.sync_api import Page, expect
 from config.config import Config
 from utils import allure_attach
-
+import threading
+import time
 
 class BasePage:
     def __init__(self, page: Page):
         self.page = page
         self.timeout = Config.DEFAULT_TIMEOUT
-        self._last_screenshot_time = 0  # Для дедупликации скриншотов
+        self._thread_local = threading.local()
+        self._thread_local.last_screenshot_time = 0
+
+    def safe_goto_with_retry(self, url: str, retries: int = 2):
+        """Безопасный переход с повторными попытками"""
+        for attempt in range(retries):
+            try:
+                with allure.step(f"Попытка {attempt + 1}: перейти на {url}"):
+                    self.page.goto(url, wait_until="domcontentloaded", timeout=30000)
+                    self.page.wait_for_timeout(1000)
+                    return
+            except Exception as e:
+                if attempt == retries - 1:
+                    raise
+                allure.attach(f"Ошибка при переходе: {str(e)}. Повторная попытка...",
+                              name=f"Retry {attempt + 1}")
+                time.sleep(2)
 
     def take_screenshot(self, name: str = "Скриншот", force: bool = False):
         """Сделать скриншот и прикрепить к отчету (только если это важно)"""

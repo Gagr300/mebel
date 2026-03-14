@@ -4,7 +4,7 @@ greenlet>=3.0.0
 
 # Основные зависимости
 pytest>=8.0.0
-pytest-xdist>=3.5.0
+pytest-xdist>=3.6.0
 allure-pytest>=2.13.5
 
 # Playwright
