@@ -26,7 +26,7 @@ class ProductPage(BasePage):
     def get_product_price(self) -> str:
         price = self.get_text(self.PRICE)
         allure.attach(f"Цена товара: {price}", name="Информация")
-        return price
+        return price.replace(' ','')
 
     def get_specifications(self) -> dict:
         """Получить все характеристики товара в виде словаря"""
