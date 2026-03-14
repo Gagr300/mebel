@@ -1,0 +1,11 @@
+# Сначала устанавливаем wheel и greenlet
+wheel>=0.42.0
+greenlet>=3.0.0
+
+# Основные зависимости
+pytest>=8.0.0
+pytest-xdist>=3.5.0
+allure-pytest>=2.13.5
+
+# Playwright
+playwright>=1.42.0
