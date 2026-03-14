@@ -1,3 +1,4 @@
+# tests/test_product_details.py
 import allure
 from pages.catalog_page import CatalogPage  # Импортируем из правильного модуля
 from pages.product_page import ProductPage
@@ -10,24 +11,29 @@ def test_product_details(catalog_page, product_page):
     TARGET_PRODUCT = "Диван Мешковина"
 
     catalog_page.open_catalog()
+    catalog_page.take_screenshot("Каталог открыт")
 
     with allure.step(f"Найти и кликнуть на товар '{TARGET_PRODUCT}'"):
         # Используем метод из CatalogPage
         assert catalog_page.find_product_by_name(TARGET_PRODUCT), f"Товар '{TARGET_PRODUCT}' не найден"
+        catalog_page.take_screenshot(f"Товар '{TARGET_PRODUCT}' найден в каталоге")
         actual_href = catalog_page.get_product_href_by_name(TARGET_PRODUCT)
         catalog_page.click_product_by_name(TARGET_PRODUCT)
+        catalog_page.take_screenshot("После перехода на страницу товара")
 
     with allure.step("Проверить, что открылась карточка правильного товара"):
         product_page_link = product_page.get_product_title()
+        product_page.take_screenshot("Заголовок товара")
         assert actual_href in product_page.page.url, \
             f"Открылась ссылка '{product_page_link}' вместо '{actual_href}'"
 
     with allure.step("Перейти на вкладку 'Характеристики'"):
         product_page.click_specifications_tab()
-
+        product_page.take_screenshot("Вкладка характеристик")
 
     with allure.step("Получить все характеристики товара"):
         specs = product_page.get_specifications_from_table()
+        product_page.take_screenshot("Характеристики товара")
 
         # Выводим все характеристики в отчет
         if specs:
@@ -43,6 +49,7 @@ def test_product_details(catalog_page, product_page):
         width_value = product_page.get_specification_value("Ширина")
 
         if width_value:
+            product_page.take_screenshot(f"Найдена ширина: {width_value}")
             allure.attach(f"Найдена ширина: {width_value}", name="Информация")
 
             assert "2200" in width_value or "2200" in width_value, \
@@ -54,6 +61,7 @@ def test_product_details(catalog_page, product_page):
 
         else:
             # Если ширина не найдена, пробуем другие характеристики
+            product_page.take_screenshot("Характеристика 'Ширина' не найдена")
             allure.attach("Характеристика 'Ширина' не найдена, ищем альтернативы",
                           name="Предупреждение")
 
@@ -64,12 +72,14 @@ def test_product_details(catalog_page, product_page):
             for alt_name in alt_names:
                 alt_value = product_page.get_specification_value(alt_name)
                 if alt_value:
+                    product_page.take_screenshot(f"Найдена альтернатива: {alt_name} = {alt_value}")
                     allure.attach(f"Найдена альтернативная характеристика '{alt_name}': {alt_value}",
                                   name="Информация")
                     found = True
                     break
 
             if not found:
+                product_page.take_screenshot("Информация о размерах не найдена")
                 allure.attach("Не удалось найти информацию о размерах товара",
                               name="Предупреждение")
                 # Не падаем, так как это не критично для демо-теста
@@ -78,14 +88,19 @@ def test_product_details(catalog_page, product_page):
         # Проверяем механизм трансформации (если есть)
         mechanism = product_page.get_specification_value("Механизм")
         if mechanism:
+            product_page.take_screenshot(f"Механизм: {mechanism}")
             allure.attach(f"Механизм трансформации: {mechanism}", name="Информация")
 
         # Проверяем материал
         material = product_page.get_specification_value("Материал")
         if material:
+            product_page.take_screenshot(f"Материал: {material}")
             allure.attach(f"Материал: {material}", name="Информация")
 
         # Проверяем цвет
         color = product_page.get_specification_value("Цвет")
         if color:
+            product_page.take_screenshot(f"Цвет: {color}")
             allure.attach(f"Цвет: {color}", name="Информация")
+
+    product_page.take_screenshot("Финальное состояние страницы товара")

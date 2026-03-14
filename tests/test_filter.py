@@ -1,4 +1,5 @@
 # tests/test_filter.py
+# tests/test_filter.py
 import allure
 import re
 from pages.catalog_page import CatalogPage
@@ -16,6 +17,7 @@ def test_filter_by_price(catalog_page):
 
     with allure.step("Открыть каталог диванов"):
         catalog_page.open_catalog()
+        catalog_page.take_screenshot("Каталог до фильтрации")
         # Проверяем, что мы действительно на странице диванов
         page_title = catalog_page.get_page_title()
         allure.attach(f"Заголовок страницы: {page_title}", name="Информация")
@@ -34,6 +36,7 @@ def test_filter_by_price(catalog_page):
         # Проверяем URL после применения фильтра
         current_url = catalog_page.page.url
         allure.attach(f"URL после фильтрации: {current_url}", name="Информация")
+        catalog_page.take_screenshot("Каталог после фильтрации")
 
         # Проверяем, что в URL есть параметры фильтрации
         assert f"price={PRICE_FROM}-{PRICE_TO}" in current_url, \
@@ -58,7 +61,7 @@ def test_filter_by_price(catalog_page):
         except AssertionError as e:
             # Если есть товары вне диапазона, логируем их, но не падаем,
             # так как основная проверка - наличие целевого товара
-            allure.attach(f"Предупреждение: {str(e)}", name="⚠️ Не все цены в диапазоне")
+            allure.attach(f"Предупреждение: {str(e)}", name="Не все цены в диапазоне")
         except Exception as e:
             allure.attach(f"Ошибка при проверке цен: {str(e)}", name="Ошибка")
 
@@ -78,6 +81,7 @@ def test_filter_by_price(catalog_page):
                     f"Диапазон фильтра: {PRICE_FROM}-{PRICE_TO} руб.",
                     name="Результат"
                 )
+                catalog_page.take_screenshot(f"Найден товар: {TARGET_PRODUCT}")
 
                 # Проверяем, что цена товара в диапазоне фильтра
                 assert PRICE_FROM <= price_num <= PRICE_TO, \
@@ -97,7 +101,6 @@ def test_filter_by_price(catalog_page):
                 )
 
             # Делаем скриншот для отладки
-            from utils.allure_attach import attach_screenshot
-            attach_screenshot(catalog_page.page, "Результаты фильтрации")
+            catalog_page.take_screenshot("Результаты фильтрации - товар не найден")
 
         assert found, f"Товар '{TARGET_PRODUCT}' не найден после фильтрации"

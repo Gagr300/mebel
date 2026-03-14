@@ -1,3 +1,4 @@
+# pages/base_page.py
 import allure
 from playwright.sync_api import Page, expect
 from config.config import Config
@@ -8,6 +9,13 @@ class BasePage:
     def __init__(self, page: Page):
         self.page = page
         self.timeout = Config.DEFAULT_TIMEOUT
+        self._last_screenshot_time = 0  # Для дедупликации скриншотов
+
+    def take_screenshot(self, name: str = "Скриншот", force: bool = False):
+        """Сделать скриншот и прикрепить к отчету (только если это важно)"""
+        # По умолчанию не делаем скриншоты в каждом шаге
+        if force:
+            allure_attach.attach_screenshot(self.page, name)
 
     def open(self, url: str = ""):
         with allure.step(f"Открыть страницу {url if url else Config.BASE_URL}"):
@@ -49,8 +57,8 @@ class BasePage:
         except:
             return False
 
-    # Для скриншотов при падении (будет вызвано из conftest.py)
     def make_screenshot_on_failure(self):
+        """Скриншот при падении (вызывается из conftest.py)"""
         allure_attach.attach_screenshot(self.page, name="Скриншот в момент ошибки")
 
     def debug_element(self, selector: str, description: str = ""):

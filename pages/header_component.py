@@ -5,10 +5,8 @@ from config.config import Config
 
 
 class HeaderComponent(BasePage):
-    # Более точные локаторы на основе HTML
     CART_LINK = ".header-laptop__link_cart a[href='/cart']"
     FAVORITE_LINK = ".header-laptop__link_favorite a[href='/favorite']"
-    # Для мобильной версии
     CART_LINK_MOBILE = ".mobile-header__cart a[href='/cart']"
     FAVORITE_LINK_MOBILE = ".mobile-header__favorite a[href='/favorite']"
 
