@@ -1,4 +1,3 @@
-# tests/test_cart.py
 import allure
 from pages.product_page import ProductPage
 

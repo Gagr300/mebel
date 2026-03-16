@@ -1,4 +1,3 @@
-# tests/test_favorite.py
 import allure
 from pages.header_component import HeaderComponent
 

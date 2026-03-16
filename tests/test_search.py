@@ -1,5 +1,3 @@
-# tests/test_search.py
-# tests/test_search.py
 import allure
 
 

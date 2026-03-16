@@ -48,14 +48,12 @@ class CatalogPage(BasePage):
             # Скриншот ДО фильтрации
             self.take_screenshot("До применения фильтра", force=True)
 
-            # Получаем базовый URL без параметров
             current_url = self.page.url
             if '?' in current_url:
                 base_url = current_url.split('?')[0]
             else:
                 base_url = current_url
 
-            # Формируем URL с фильтром
             filter_url = f"{base_url}?price={price_from}-{price_to}"
 
             allure.attach(f"URL для фильтрации: {filter_url}", name="Информация")
@@ -73,7 +71,6 @@ class CatalogPage(BasePage):
                 allure.attach(f"Ошибка при применении фильтра: {str(e)}", name="Ошибка")
                 raise
 
-            # Проверяем, что фильтр применился
             assert f"price={price_from}-{price_to}" in self.page.url, \
                 f"Фильтр не применился. Текущий URL: {self.page.url}"
 
@@ -99,7 +96,6 @@ class CatalogPage(BasePage):
                             allure.attach(f"Найден товар #{i}: {name}", name="Информация")
                             return True
 
-            # Если товар не найден, прикладываем список всех товаров для отладки
             allure.attach(
                 f"Поиск '{product_name}'\n\nВсе товары на странице:\n" + "\n".join(found_products),
                 name="Детальная информация"
@@ -139,14 +135,14 @@ class CatalogPage(BasePage):
             if price_text:
                 return price_text.strip()
 
-        # Способ 2: старая цена (если нет текущей)
+        # Способ 2: старая цена
         price_old = card.locator(self.PRODUCT_PRICE_OLD).first
         if price_old.is_visible():
             price_text = price_old.text_content()
             if price_text:
                 return price_text.strip()
 
-        # Способ 3: ищем любые числа с символом ₽
+        # Способ 3: любые числа с символом ₽
         all_text = card.text_content()
         if all_text:
             match = re.search(r'(\d[\d\s]*)\s*₽', all_text)
@@ -185,7 +181,6 @@ class CatalogPage(BasePage):
             if count_element.is_visible():
                 count_text = count_element.text_content()
                 if count_text:
-                    # Ищем паттерн "из X"
                     match = re.search(r'из\s+(\d+)', count_text)
                     if match:
                         return int(match.group(1))
@@ -201,7 +196,7 @@ class CatalogPage(BasePage):
             prices_in_range = []
             prices_out_of_range = []
 
-            # Получаем все цены на странице
+            # все цены на странице
             price_texts = self.get_all_prices_on_page()
 
             for i, price_text in enumerate(price_texts, 1):
@@ -217,7 +212,7 @@ class CatalogPage(BasePage):
                                             for i, text, num in prices_out_of_range])
                 allure.attach(f"Товары вне диапазона:\n{out_range_info}",
                               name="⚠Цены вне диапазона")
-                # Скриншот только если есть проблемы
+                # Скриншот, если обнаружены цены вне диапазона
                 self.take_screenshot(f"Обнаружены цены вне диапазона", force=True)
 
             assert len(prices_out_of_range) == 0, \

@@ -1,6 +1,5 @@
-# tests/test_product_details.py
 import allure
-from pages.catalog_page import CatalogPage  # Импортируем из правильного модуля
+from pages.catalog_page import CatalogPage
 from pages.product_page import ProductPage
 from config.config import Config
 

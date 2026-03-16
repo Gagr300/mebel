@@ -1,4 +1,3 @@
-# pages/cart_page.py
 import allure
 import re
 from pages.base_page import BasePage
@@ -44,10 +43,8 @@ class CartPage(BasePage):
                 # Находим первый товар в корзине
                 first_item = self.page.locator(self.CART_ITEM).first
 
-                # Ищем все элементы с ценой внутри первого товара
                 price_elements = first_item.locator(".col-md-2.py-2").all()
 
-                # Логируем найденные элементы для отладки
                 allure.attach(f"Найдено элементов с ценой: {len(price_elements)}", name="Отладка")
 
                 for i, elem in enumerate(price_elements):
@@ -62,21 +59,17 @@ class CartPage(BasePage):
                             allure.attach(f"Найдена цена: {price_clean}", name="Информация")
                             return price_clean
 
-                # Если не нашли через точный локатор, пробуем извлечь из всего текста
                 item_text = first_item.text_content() or ""
                 allure.attach(f"Весь текст товара: {item_text}", name="Отладка")
 
-                # Ищем паттерн "число ₽" во всем тексте
                 match = re.search(r'(\d[\d\s]*)₽', item_text)
                 if match:
                     price_clean = re.sub(r'[^\d]', '', match.group(1))
                     allure.attach(f"Цена найдена через regex: {price_clean}", name="Информация")
                     return price_clean
 
-                # Если все еще не нашли, пробуем другой паттерн
                 numbers = re.findall(r'(\d[\d\s]*)', item_text)
                 if len(numbers) >= 2:
-                    # Обычно вторая цифра - это цена (первая может быть количеством)
                     price_clean = re.sub(r'[^\d]', '', numbers[1])
                     allure.attach(f"Цена предположительно: {price_clean}", name="Информация")
                     return price_clean
@@ -90,7 +83,6 @@ class CartPage(BasePage):
             total_element = self.page.locator(self.TOTAL_PRICE).first
             if total_element.is_visible():
                 total_text = total_element.text_content() or ""
-                # Извлекаем число из текста "Итого: 12 015 ₽"
                 match = re.search(r'([\d\s]+)₽', total_text)
                 if match:
                     total_clean = re.sub(r'[^\d]', '', match.group(1))

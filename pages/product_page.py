@@ -1,4 +1,3 @@
-# pages/product_page.py
 import allure
 import re
 from pages.base_page import BasePage
@@ -53,7 +52,7 @@ class ProductPage(BasePage):
 
             if spec_tab.is_visible():
                 spec_tab.scroll_into_view_if_needed()
-                self.page.wait_for_timeout(500)
+                self.page.wait_for_timeout(1000)
 
                 is_active = spec_tab.get_attribute('aria-selected') == 'true' or 'active' in (
                             spec_tab.get_attribute('class') or '')
@@ -114,7 +113,6 @@ class ProductPage(BasePage):
 
     def extract_numeric_value(self, text: str) -> int:
         """Извлечь числовое значение из текста"""
-        import re
         match = re.search(r'(\d+)', text)
         if match:
             return int(match.group(1))

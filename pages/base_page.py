@@ -1,10 +1,10 @@
-# pages/base_page.py
 import allure
 from playwright.sync_api import Page, expect
 from config.config import Config
 from utils import allure_attach
 import threading
 import time
+
 
 class BasePage:
     def __init__(self, page: Page):
@@ -30,7 +30,6 @@ class BasePage:
 
     def take_screenshot(self, name: str = "Скриншот", force: bool = False):
         """Сделать скриншот и прикрепить к отчету (только если это важно)"""
-        # По умолчанию не делаем скриншоты в каждом шаге
         if force:
             allure_attach.attach_screenshot(self.page, name)
 
@@ -75,7 +74,7 @@ class BasePage:
             return False
 
     def make_screenshot_on_failure(self):
-        """Скриншот при падении (вызывается из conftest.py)"""
+        """Скриншот при падении."""
         allure_attach.attach_screenshot(self.page, name="Скриншот в момент ошибки")
 
     def debug_element(self, selector: str, description: str = ""):
@@ -123,10 +122,8 @@ class BasePage:
         with allure.step(f"Перейти на страницу {url}"):
             try:
                 self.page.goto(url, wait_until=wait_until, timeout=timeout)
-                # Небольшая пауза для стабилизации
                 self.page.wait_for_timeout(1000)
             except Exception as e:
                 allure.attach(f"Ошибка при переходе на {url}: {str(e)}", name="Ошибка навигации")
-                # Пробуем еще раз с меньшими требованиями
                 self.page.goto(url, wait_until="commit", timeout=timeout)
                 self.page.wait_for_timeout(2000)

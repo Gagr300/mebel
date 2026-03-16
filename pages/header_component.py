@@ -1,7 +1,7 @@
-# pages/header_component.py
 import allure
 from pages.base_page import BasePage
 from config.config import Config
+import re
 
 
 class HeaderComponent(BasePage):
@@ -19,45 +19,31 @@ class HeaderComponent(BasePage):
             else:
                 self.page.goto(Config.CART_URL)
 
-            # Ждем только загрузки DOM, а не полной остановки сети
             self.page.wait_for_load_state("domcontentloaded")
-            # Даем небольшую паузу для рендеринга
             self.page.wait_for_timeout(1000)
 
     def go_to_favorite(self):
         with allure.step("Перейти в избранное через шапку сайта"):
-            # Пробуем найти ссылку на избранное в разных местах
             favorite_found = False
 
-            # Для десктопной версии
             desktop_link = self.page.locator(self.FAVORITE_LINK).first
             if desktop_link.is_visible():
                 desktop_link.click()
                 favorite_found = True
                 allure.attach("Клик по ссылке избранного (десктоп)", name="Успешно")
 
-            # Для мобильной версии
-            if not favorite_found:
-                mobile_link = self.page.locator(self.FAVORITE_LINK_MOBILE).first
-                if mobile_link.is_visible():
-                    mobile_link.click()
-                    favorite_found = True
-                    allure.attach("Клик по ссылке избранного (мобильная)", name="Успешно")
-
-            # Если не нашли через клик, переходим напрямую по URL
+            # иначе переходим напрямую по URL
             if not favorite_found:
                 self.page.goto(Config.FAVORITE_URL)
                 allure.attach("Переход по прямому URL избранного", name="Информация")
 
-            # Ждем только загрузки DOM, не networkidle
             self.page.wait_for_load_state("domcontentloaded")
-            self.page.wait_for_timeout(2000)  # Даем время на рендеринг JS
+            self.page.wait_for_timeout(2000)
 
-            # Проверяем, что мы действительно на странице избранного
+            # Проверяем, что мы на странице избранного
             current_url = self.page.url
             assert "favorite" in current_url, f"Не удалось перейти в избранное. Текущий URL: {current_url}"
 
-            # Делаем скриншот для отчета
             from utils.allure_attach import attach_screenshot
             attach_screenshot(self.page, "Страница избранного после перехода")
 
@@ -80,10 +66,8 @@ class HeaderComponent(BasePage):
                 if counter_element.is_visible():
                     count_text = counter_element.text_content()
                     try:
-                        # Очищаем текст от возможных HTML-тегов и пробелов
+                        # Очищаем текст
                         if count_text:
-                            # Убираем все, кроме цифр
-                            import re
                             digits = re.sub(r'[^\d]', '', count_text)
                             if digits:
                                 count = int(digits)
@@ -92,6 +76,5 @@ class HeaderComponent(BasePage):
                     except (ValueError, AttributeError):
                         continue
 
-            # Если не нашли счетчик, возможно, он пустой (скрыт)
-            allure.attach("Счетчик избранного не найден или пуст (возвращаем 0)", name="Информация")
+            allure.attach("Счетчик избранного не найден или пуст", name="Информация")
             return 0

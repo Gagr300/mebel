@@ -1,5 +1,3 @@
-# tests/test_filter.py
-# tests/test_filter.py
 import allure
 import re
 from pages.catalog_page import CatalogPage

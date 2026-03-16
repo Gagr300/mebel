@@ -1,4 +1,3 @@
-# conftest.py
 import allure
 import pytest
 import os
@@ -6,6 +5,7 @@ import re
 from playwright.sync_api import sync_playwright
 from config.config import Config
 from utils import allure_attach
+import multiprocessing
 
 
 # Парсим аргументы командной строки для выбора браузера
@@ -55,7 +55,6 @@ def pytest_configure(config):
         os.environ['PYTEST_XDIST_NUM_THREADS'] = num_threads
 
         if num_threads == "auto":
-            import multiprocessing
             threads = multiprocessing.cpu_count()
             print(f"\nЗапуск тестов в {threads} потоков (автоопределение)")
         else:
@@ -98,15 +97,13 @@ def page(browser, request):
         user_agent=f"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (parallel-test-{request.node.name})"
     )
 
-    # Устанавливаем таймаут
     context.set_default_timeout(10000)
 
     page = context.new_page()
 
-    # Добавляем трассировку для отладки (опционально)
+    # Добавляем трассировку для отладки
     worker_id = getattr(request.config, 'workerinput', {}).get('workerid', 'master')
     trace_path = f"traces/{worker_id}_{request.node.name}"
-
 
     yield page
 
@@ -162,7 +159,7 @@ def pytest_runtest_makereport(item, call):
             page = item.funcargs["page"]
             worker_id = getattr(item.config, 'workerinput', {}).get('workerid', 'master')
 
-            # Добавляем информацию о worker'е в название скриншота
+            # Добавляем информацию о worker в название скриншота
             allure_attach.attach_screenshot(
                 page,
                 name=f"Скриншот при падении (worker: {worker_id})"
@@ -187,7 +184,7 @@ def pytest_runtest_setup(item):
     print(f"\n[Worker {worker_id}] Запуск теста: {item.name}")
 
 
-# Функция для группировки тестов по категориям (опционально)
+# Функция для группировки тестов по категориям
 def pytest_collection_modifyitems(items):
     """Группируем тесты для более эффективного параллельного запуска"""
     for item in items:

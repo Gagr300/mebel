@@ -1,11 +1,10 @@
-# pages/favorite_page.py
 import allure
 from pages.base_page import BasePage
 from config.config import Config
+import re
 
 
 class FavoritePage(BasePage):
-    # Избранное может быть пустым или с товарами
     PRODUCT_CARD = ".product-card"
     EMPTY_FAVORITE_MESSAGE = ".empty-message, .favorite-empty, .lead:has-text('пуст')"  # Сообщение о пустом избранном
     FIRST_PRODUCT_NAME = f"{PRODUCT_CARD}:first-child .product-card__name a"
@@ -72,7 +71,6 @@ class FavoritePage(BasePage):
             card_html = first_card.inner_html()
 
             # Ищем текст между тегами <a>
-            import re
             match = re.search(r'<a[^>]*>(.*?)</a>', card_html)
             if match:
                 name = match.group(1).strip()
@@ -121,7 +119,6 @@ class FavoritePage(BasePage):
                 count_element = self.page.locator(selector).first
                 if count_element.is_visible():
                     count_text = count_element.text_content()
-                    import re
                     match = re.search(r'из\s+(\d+)', count_text)
                     if match:
                         count = int(match.group(1))
@@ -135,7 +132,7 @@ class FavoritePage(BasePage):
             return count
 
     def get_first_product_href(self) -> str:
-        """Получить href (ссылку) первого товара в избранном"""
+        """Получить href первого товара в избранном"""
         with allure.step("Получить href первого товара в избранном"):
             if not self.is_favorite_has_items():
                 allure.attach("В избранном нет товаров", name="Ошибка")
@@ -173,8 +170,6 @@ class FavoritePage(BasePage):
         if not href:
             return ""
 
-        import re
-        # Ищем паттерны вида /id123456 или /product/123456
         match = re.search(r'/id(\d+)', href)
         if match:
             return match.group(1)
